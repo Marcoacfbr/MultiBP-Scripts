@@ -1,5 +1,5 @@
 # MultiBP
-MultiBP is a framework that allows the comaprison of long DNA sequences in multiple GPUs with pruning features using a score-sahre Static or Dynamic workload distribution.
+MultiBP is a framework that allows the comparison of two long DNA sequences using Smith-Waterman algorithm in multiple GPUs with block pruning features using a score-share Static or Dynamic workload distribution.
 
 # Source Code
 It will be available soon.
