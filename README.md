@@ -8,7 +8,9 @@ It will be available soon.
 The scripts to execute Static-MultiBP and Dynamic-MultiBP in a SLURM environment are availble here: https://github.com/Marcoacfbr/MultiBP/tree/main/Scripts
 
 # Diagram
-![Alt text](Figures/Diagrama.png?raw=true "MultiBP Diagram")
+<p align="center">
+  <img src="Figures/Diagrama.png" width="350" title="MultiBP Diagram">
+</p>
 
 # References
 It will be available soon.
