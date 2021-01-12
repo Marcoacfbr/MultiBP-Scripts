@@ -1,0 +1,204 @@
+#!/bin/bash
+
+##########################################################
+#  Script de escalonamento de execuções MultiBP em SLURM #
+#  Estratégia: Dynamic-MultiBP                           #
+#  Parâmetros de entrada:                                #
+#     $1: identificação das sequências                   #
+#     $2: quantidade de GPUs                             #
+#  Autor: Marco Figueiredo                               #
+########################################################## 
+
+
+
+BASE_IP=10.33.12    # Endereço IP base
+baseport=2200       # Porta base
+sol=dynamic-multibp  # Estratégia 
+
+# Função que converte nomes em IPs
+function getips ()
+{
+nodelist=`sed 's/\[//' <<+++ | sed 's/\]//' | sed 's/prm-dgx-//g' | sed 's/,/ /g'
+$1
++++`
+nodenums=""
+for i in $nodelist; do
+   e=`sed 's/-/ - /' <<+++
+$i
++++`
+   val=`expr $e `
+
+   if [[ $val -lt 0 ]]; then
+     range=`sed 's/-//'<<+++
+$e
++++`
+     nodenums="$nodenums `seq $range`"
+   else
+     nodenums="$nodenums $e"
+   fi
+done
+
+nodeips=""
+for i  in $nodenums; do
+   j=$((i+10))
+   nodeips="$nodeips"$BASE_IP.$j" "
+done
+
+}
+
+# Função que retorna o IP do host corrente
+function getip ()
+{
+  for j in `seq 0 $((MYNODEID-1))`; do
+     shift
+  done
+  elem=$1
+  echo $elem
+}
+
+# Função que retorna o IP do host anterior
+function getpip ()
+{
+  if [ $MYNODEID -eq 0 ]; then
+      return;
+  fi
+  n=`expr $MYNODEID - 2`
+  for j in `seq 0 $n`; do
+     shift
+  done
+  elem=$1
+  echo  $elem
+}
+
+# Função que retorna o IP do próximo host
+function getnip ()
+{
+  if [ $MYNODEID == `expr $SLURM_NNODES - 1` ]; then
+     return;
+  fi
+  n=`expr $MYNODEID`
+  for j in `seq 0 $n`; do
+     shift
+  done
+  elem=$1
+  echo $elem
+}
+
+# Funçãp principal
+TIMESTAMP=$SLURM_JOBID.`date +%Y%m%d` # Timestamp da execução
+
+export MYNODEID=$SLURM_PROCID
+gpus=$2   # Quantidade de GPUs 
+basepart=`expr $MYNODEID '*' $gpus + 1` # Parte do host atual
+split=`expr $SLURM_NNODES '*' $gpus` # Quantidade de partes
+
+# Criação da pasta de saída
+if [ ! -d "./resultfiles/$1/${split}GPU/$TIMESTAMP" ] 
+then
+  mkdir -p ./resultfiles/$1/${split}GPU/$TIMESTAMP
+fi
+
+# Coleta de logs de execução
+HNAME=./resultfiles/$1/${split}GPU/$TIMESTAMP/$TIMESTAMP.`hostname`.$SLURM_PROCID 
+rm -f $HNAME
+touch $HNAME
+echo SLURM_NODELIST $SLURM_NODELIST >>$HNAME
+getips "$SLURM_NODELIST" >>$HNAME
+echo $SLURM_NODEID >>$HNAME
+
+ips=`getips "$SLURM_NODELIST"` # Chamada de função que obtem todos os IPs
+myip=`getip $nodeips` # Chamada de função que obtem todos os IPs
+previp=`getpip $nodeips` # Chamada de função que obtem IP anterior
+nextip=`getnip $nodeips` # Chamada de função que obtem IP seguinte
+
+
+echo myip $myip >>$HNAME
+echo previp $previp >>$HNAME
+echo nextip $nextip >>$HNAME
+
+
+home=/gpfs/fs1/jpnavarro/projects/nvidia_unb # Diretório raiz
+
+# Criação de pasta de saída de resultados
+if [ ! -d "$home/results" ] 
+then
+ mkdir $home/results
+fi
+
+
+# Case para verificar qual o par de sequências a comparar
+case "$1" in
+        10k)  seq1=$home/sequences/AF133821.1.fasta
+              seq2=$home/sequences/AY352275.1.fasta ;;
+        50k)  seq1=$home/sequences/NC_001715.1.fasta
+              seq2=$home/sequences/AF494279.1.fasta ;;
+        150k) seq1=$home/sequences/NC_000898.1.fasta
+              seq2=$home/sequences/NC_007605.1.fasta ;;
+        500k) seq1=$home/sequences/NC_003064.2.fasta
+              seq2=$home/sequences/NC_000914.1.fasta ;;
+        1m)   seq1=$home/sequences/CP000051.1.fasta
+              seq2=$home/sequences/AE002160.2.fasta ;;
+        3m)   seq1=$home/sequences/BA000035.2.fasta
+              seq2=$home/sequences/BX927147.1.fasta ;;
+        5m)   seq1=$home/sequences/AE016879.1.fasta
+              seq2=$home/sequences/AE017225.1.fasta ;;
+        7m)   seq1=$home/sequences/NC_005027.1.fasta
+              seq2=$home/sequences/NC_003997.3.fasta ;;
+        10m)  seq1=$home/sequences/NC_017186.1.fasta
+              seq2=$home/sequences/NC_014318.1.fasta ;;
+        23m)  seq1=$home/sequences/NT_033779.4.fasta
+              seq2=$home/sequences/NT_037436.3.fasta ;;
+        47m)  seq1=$home/sequences/NC_000021.7.fasta
+              seq2=$home/sequences/BA000046.3.fasta ;;
+        cr19) seq1=$home/sequences/NC_000019.9.fasta
+              seq2=$home/sequences/NC_006486.3.fasta ;;
+        cr20) seq1=$home/sequences/NC_000020.10.fasta
+              seq2=$home/sequences/NC_006487.3.fasta ;;
+        cr21) seq1=$home/sequences/NC_000021.8.fasta
+              seq2=$home/sequences/NC_006488.2.fasta  ;;
+        cr22) seq1=$home/sequences/NC_000022.10.fasta
+              seq2=$home/sequences/NC_006489.3.fasta ;;
+        cr16) seq1=$home/sequences/NC_000016.9.fasta
+              seq2=$home/sequences/NC_006483.3.fasta ;;
+        cr05) seq1=$home/sequences/NC_000005.9.fasta
+              seq2=$home/sequences/NC_006472.3.fasta ;;
+	      cry)  seq2=$home/sequences/NC_000024.9.fasta
+              seq1=$home/sequences/NC_006492.3.fasta ;;
+	      cr01) seq1=$home/sequences/NC_000001.10.fasta
+              seq2=$home/sequences/NC_006468.3.fasta ;;
+	      cr03) seq1=$home/sequences/NC_000003.11.fasta
+              seq2=$home/sequences/NC_006490.3.fasta ;;
+*) echo "Error: Unknown comparison"; exit 1 ;;
+esac
+
+# Definição de pasta de trabalho
+workdir="./resultfiles/$1/${split}GPU/$TIMESTAMP/$sol.result_$1_${split}GPU.$MYNODEID.$TIMESTAMP"
+
+last=$((gpus-1)) # Última parte de cada host 
+
+# Chamada a módulos Executor 
+for bal in `seq 0 $((last))` do
+   ./$sol/executor $bal $workdir &
+done
+
+if [ $SLURM_PROCID -eq 0 ]; then # Se primeiro host   
+   sleep 5s # Aguarda início dos Executors
+   
+   # Trata variáveis sequências
+   seqa=$(echo "$seq1" | sed 's/\//\\\//g')
+   seqb=$(echo "$seq2" | sed 's/\//\\\//g')
+   
+   # Ajusta arquivo de configuração de acordo com parâmetros
+   sed "s/XGPUS/$split/g" scripts/config.template | sed "s/XBREAK/$breakpoints/g" | sed "s/XIPS/$nodeips/g" | sed "s/XPORTS/$ports/g" | sed "s/XGPUNUMB/$gpunumb/g" | sed "s/XSPLIT/$sp/g" | sed  "s/XSEQ1/$seqa/g" | sed  "s/XSEQ2/$seqb/g" | sed "s/XMODEL/$model/g" |  sed "s/XGFLOPS/$gflops/g" > scripts/config.in
+   
+   # Chamada a módulo Controller 
+   ./$sol/controller scripts/config.in $workdir     
+fi
+
+if [ x$nextip == x ]; then # Se último host, copia arquivos resultado
+   echo "$MYNODEID: Last node finished the execution. Slurm will now kill other tasks!"
+   cp $workdir.$last/status $home/results/status_${split}GPU_$1_d.txt
+   cp $workdir.$last/statistics $home/results/statistics_${split}GPU_$1_d.txt
+else
+   echo "$MYNODEID: Waiting the last node to finish the execution..."
+fi
