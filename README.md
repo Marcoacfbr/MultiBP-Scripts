@@ -7,7 +7,7 @@ Static-MultiBP: https://github.com/Marcoacfbr/Static-MultiBP.git
 MultiBP framework: https://github.com/Marcoacfbr/MultiBP.git
 
 # SLURM Scripts
-The scripts to execute Static-MultiBP and Dynamic-MultiBP in a SLURM environment are availble here: https://github.com/Marcoacfbr/MultiBP/tree/main/Scripts
+The scripts to execute Static-MultiBP and Dynamic-MultiBP in a SLURM environment are availble here: https://github.com/Marcoacfbr/MultiBP-Scripts.git
 
 # Diagram
 <p align="center">
